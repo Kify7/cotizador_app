@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "@emotion/styled";
+import PropTypes from 'prop-types';
+import { obtenerDiferenciaYear, calcularMarca, obtenerPlan } from "../Helper";
 
 const Campo = styled.div`
   display: flex;
@@ -12,21 +14,112 @@ const Label = styled.label`
 const Select = styled.select`
   display: block;
   width: 100%;
-  padding: 1 rem;
+  padding: 1rem;
   border: 1px solid #e1e1e1;
-  --webkit-appearance: none;
+  -webkit-appearance: none;
 `;
 const InputRadio = styled.input`
   margin: 0 1rem;
 `;
 const Button = styled.button`
-    `;
-const Formulario = () => {
+  background-color: #00838f;
+  font-size: 16px;
+  width: 100%;
+  padding: 1rem;
+  color: #ffff;
+  text-transform: uppercase;
+  font-weight: bold;
+  border: none;
+  transition: background-color 0.3s ease;
+  margin-top: 2rem;
+
+  &:hover {
+    background-color: #26c6da;
+    cursor: pointer;
+  }
+`;
+
+const Error = styled.div`
+  background-color: red;
+  color: white;
+  padding: 1rem;
+  width: 100%;
+  text-align: center;
+  margin-bottom: 1.5rem;
+`;
+
+const Formulario = ({ guardarResumen, guardarCargando }) => {
+  const [datos, guardarDatos] = useState({
+    marca: "",
+    year: "",
+    plan: "",
+  });
+
+  const [error, guardarError] = useState(false);
+
+  // extraer valores del state
+  const { marca, year, plan } = datos;
+
+  // Leer los datos del formulario y colocarlos en el satate
+  const obtenerInformacion = (e) => {
+    guardarDatos({
+      ...datos,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  // cuando el usuario presiona submit
+
+  const cotizarSeguro = (e) => {
+    e.preventDefault();
+
+    if (marca.trim() === "" || year.trim() === "" || plan.trim() === "") {
+      guardarError(true);
+      return;
+    }
+    guardarError(false);
+
+    // base de 2000
+    let resultado = 2000;
+
+    // obtener la diferencia de años
+    const diferencia = obtenerDiferenciaYear(year);
+
+    // por cada año se resta el 3%
+    resultado -= (diferencia * 3 * resultado) / 100;
+
+    // Incremento Americano 15%
+    // Incremento Asíatico 5%
+    // Incremento Europeo 30%
+    resultado = calcularMarca(marca) * resultado;
+
+    // incremento de plan básico 20%
+    // incremento de plan completo 50%
+
+    const incrementoPlan = obtenerPlan(plan);
+    resultado = parseFloat(incrementoPlan * resultado).toFixed(2);
+
+    // Spinner en funcionamiento
+    guardarCargando(true);
+    setTimeout(() => {
+
+      // Elimina Spinner
+      guardarCargando(false);
+      // Total se pasa al componente principal
+      guardarResumen({
+        cotizacion: resultado,
+        datos,
+      });
+    }, 3000);
+  };
+
   return (
-    <form>
+    <form onSubmit={cotizarSeguro}>
+      {error ? <Error>Todos los campos son obligatorios</Error> : null}
+
       <Campo>
         <Label>Marca</Label>
-        <Select>
+        <Select name="marca" value={marca} onChange={obtenerInformacion}>
           <option value="">---Seleccione---</option>
           <option value="americano">Americano</option>
           <option value="europeo">Europeo</option>
@@ -35,7 +128,7 @@ const Formulario = () => {
       </Campo>
       <Campo>
         <Label>Año</Label>
-        <Select>
+        <Select name="year" value={year} onChange={obtenerInformacion}>
           <option value="">-- Seleccione --</option>
           <option value="2021">2021</option>
           <option value="2020">2020</option>
@@ -51,12 +144,31 @@ const Formulario = () => {
       </Campo>
       <Campo>
         <Label>Plan</Label>
-        <InputRadio type="radio" name="plan" value="basico" /> Básico
-        <InputRadio type="radio" name="plan" value="completo" /> Completo
+        <InputRadio
+          type="radio"
+          name="plan"
+          value="basico"
+          checked={plan === "basico"}
+          onChange={obtenerInformacion}
+        />{" "}
+        Básico
+        <InputRadio
+          type="radio"
+          name="plan"
+          value="completo"
+          checked={plan === "completo"}
+          onChange={obtenerInformacion}
+        />{" "}
+        Completo
       </Campo>
-      <button type="button">Cotizar</button>
+      <Button type="submit">Cotizar</Button>
     </form>
   );
 };
+
+Formulario.propTypes = {
+  guardarResumen: PropTypes.func.isRequired,
+  guardarCargando: PropTypes.func.isRequired,
+}
 
 export default Formulario;
